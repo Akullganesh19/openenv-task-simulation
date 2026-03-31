@@ -1,0 +1,7 @@
+name: openenv-task-simulation
+version: 1.0.0
+description: A complete OpenEnv environment simulation with 3 graded tasks
+author: OpenEnv Team
+license: MIT
+entrypoint: main.py
+framework: openenv
