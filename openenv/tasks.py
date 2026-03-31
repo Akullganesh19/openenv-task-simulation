@@ -1,5 +1,5 @@
-from typing import Dict, Any, Callable
-from .models import TaskType, TaskState
+from typing import Dict, Any, Callable, List, Optional
+from .models import TaskDifficulty
 
 def grade_easy_task(solution: str) -> float:
     expected = "def hello_world():\n    return 'Hello, World!'"
@@ -31,19 +31,22 @@ class TaskManager:
     def __init__(self):
         self._tasks = {
             "task_1": {
-                "type": TaskType.EASY,
+                "difficulty": TaskDifficulty.EASY,
                 "description": "Complete a simple coding exercise: Implement a hello_world() function that returns 'Hello, World!'.",
-                "grader": grade_easy_task
+                "grader": grade_easy_task,
+                "context": "def hello_world():\n    pass",
             },
             "task_2": {
-                "type": TaskType.MEDIUM,
+                "difficulty": TaskDifficulty.MEDIUM,
                 "description": "Debug and implement a recursive fibonacci(n) function.",
-                "grader": grade_medium_task
+                "grader": grade_medium_task,
+                "context": "def fibonacci(n):",
             },
             "task_3": {
-                "type": TaskType.HARD,
+                "difficulty": TaskDifficulty.HARD,
                 "description": "Optimize or implement the Quicksort algorithm.",
-                "grader": grade_hard_task
+                "grader": grade_hard_task,
+                "context": "",
             }
         }
 
