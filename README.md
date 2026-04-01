@@ -1,3 +1,15 @@
+---
+title: professional-coding-env
+emoji: 🚀
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_file: server/app.py
+pinned: false
+app_port: 7860
+---
+
+
 # OpenEnv Task Simulation
 
 A structured environment for evaluating AI agents on coding tasks.
