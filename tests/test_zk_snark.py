@@ -2,9 +2,9 @@ import hashlib
 import json
 
 class SimulatedZKVerificator:
-    \"\"\"
+    """
     Placeholder for Zero-knowledge proof verification for results.
-    \"\"\"
+    """
     @staticmethod
     def generate_proof(state_vector: dict, public_key: str) -> str:
         serialized = json.dumps(state_vector, sort_keys=True).encode('utf-8')

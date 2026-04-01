@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "professional-coding-env"
+version = "3.0.0"
+description = "Professional software engineering task simulation with isolated WebSocket sessions"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+  {name = "OpenEnv Submitter"}
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Framework :: FastAPI"
+]
+dependencies = [
+    "pydantic==2.5.0",
+    "fastapi>=0.104.1",
+    "uvicorn>=0.24.0",
+    "websockets",
+    "openai>=1.2.3",
+    "gradio",
+    "openenv-core>=0.2.0"
+]
+
+[project.scripts]
+server = "server.app:main"
+openenv-test = "inference:run_baseline_repro"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["models*", "tasks*", "core*", "server*", "client*"]
