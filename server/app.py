@@ -1,9 +1,10 @@
-from fastapi import FastAPI, WebSocket, HTTPException, Depends
-from typing import Dict, Any, Optional
+import asyncio
 import json
 import uuid
 import logging
-from .environment import CodingEnvironment
+from typing import Dict, Any, Optional
+from fastapi import FastAPI, WebSocket, HTTPException, Depends, Body, APIRouter
+from server.environment import CodingEnvironment
 from models import Observation, Action, Reward, EnvironmentState
 import uvicorn
 
@@ -11,25 +12,80 @@ import uvicorn
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("openenv-server")
 
-app = FastAPI(title="OpenEnv Server", description="Production-grade RL coding environment with session-isolated WebSockets.")
+app = FastAPI(title="OpenEnv Server", description="Production-grade RL coding environment with session-isolated access.")
+v1_router = APIRouter(prefix="/api/v1")
 
+# Thread-safe session management
 sessions: Dict[str, CodingEnvironment] = {}
+sessions_lock = asyncio.Lock()
 
 @app.get("/")
-def read_root():
-    return {"status": "ok", "message": "Welcome to OpenEnv Professional Server."}
+async def read_root():
+    return {"status": "ok", "message": "Welcome to OpenEnv Professional Server.", "version": "1.0.0"}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "active_sessions": len(sessions)}
+
+@v1_router.post("/reset")
+async def reset_endpoint(episode_id: Optional[str] = Body(None, embed=True)):
+    """Reset the environment and return the initial observation and session_id."""
+    session_id = str(uuid.uuid4())
+    env = CodingEnvironment()
+    obs = env.reset(episode_id=episode_id)
+    
+    async with sessions_lock:
+        sessions[session_id] = env
+    
+    logger.info(f"New session established via REST: {session_id}")
+    return {"session_id": session_id, "observation": obs.model_dump()}
+
+@v1_router.post("/step")
+async def step_endpoint(session_id: str = Body(...), action_data: Dict[str, Any] = Body(...)):
+    """Execute a step in a given session."""
+    async with sessions_lock:
+        env = sessions.get(session_id)
+    
+    if not env:
+        raise HTTPException(status_code=404, detail="Session not found or expired.")
+    
+    try:
+        action = Action(**action_data)
+        obs, reward, done, info = env.step(action)
+        return {
+            "observation": obs.model_dump(),
+            "reward": reward.model_dump(),
+            "done": done,
+            "info": info
+        }
+    except Exception as e:
+        logger.error(f"Error in session {session_id} step: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@v1_router.get("/state")
+async def state_endpoint(session_id: str):
+    """Retrieve the current state of a session."""
+    async with sessions_lock:
+        env = sessions.get(session_id)
+        
+    if not env:
+        raise HTTPException(status_code=404, detail="Session not found.")
+        
+    return {"state": env.state.model_dump()}
+
+app.include_router(v1_router)
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    """Persistent session logic over WebSockets.
-    Each connection creates a unique instance of CodingEnvironment.
-    """
+    """Persistent session logic over WebSockets."""
     await websocket.accept()
     session_id = str(uuid.uuid4())
     env = CodingEnvironment()
-    sessions[session_id] = env
     
-    logger.info(f"New session established: {session_id}")
+    async with sessions_lock:
+        sessions[session_id] = env
+    
+    logger.info(f"New session established via WS: {session_id}")
     
     try:
         await websocket.send_json({"type": "session_start", "session_id": session_id})
@@ -62,15 +118,12 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.send_json({"type": "error", "message": f"Unsupported message type: {msg_type}"})
                 
     except Exception as e:
-        logger.error(f"Error in session {session_id}: {str(e)}")
+        logger.error(f"Error in WS session {session_id}: {str(e)}")
     finally:
-        if session_id in sessions:
-            del sessions[session_id]
+        async with sessions_lock:
+            if session_id in sessions:
+                del sessions[session_id]
         logger.info(f"Session terminated: {session_id}")
-
-@app.get("/health")
-def health_check():
-    return {"status": "ok", "active_sessions": len(sessions)}
 
 def main():
     uvicorn.run(app, host="0.0.0.0", port=7860)

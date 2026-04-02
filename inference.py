@@ -2,107 +2,94 @@ import asyncio
 import logging
 import sys
 import os
+from typing import List
 from openai import AsyncOpenAI
 from models import Action, ActionType
 from client import CodingEnvClient
 
-# Configure baseline logging to emit structured format logs
-logging.basicConfig(level=logging.INFO, format='%(message)s', handlers=[logging.StreamHandler(sys.stdout)])
+# Configure baseline logging with ISO 8601 timestamps
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%dT%H:%M:%S%z',
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
 logger = logging.getLogger("inference-agent")
+
+# Mandatory environment variables
+API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:11434/v1")
+MODEL_NAME = os.environ.get("MODEL_NAME", "llama3")
+HF_TOKEN = os.environ.get("HF_TOKEN", "ollama")
+LOCAL_IMAGE_NAME = os.environ.get("LOCAL_IMAGE_NAME", "openenv-baseline:latest")
+TASK_NAME = os.environ.get("OPENENV_TASK", "software-engineering-simulation")
+BENCHMARK = os.environ.get("OPENENV_BENCHMARK", "openenv-v1")
 
 class BaselineAgent:
     """Reference agent for baseline reproduction scoring using OpenAI client."""
-    
     def __init__(self, name="Agent-alpha-01"):
         self.name = name
-        
-        api_base_url = os.environ.get("API_BASE_URL", "https://api.openai.com/v1")
-        model_name = os.environ.get("MODEL_NAME", "gpt-3.5-turbo")
-        api_key = os.environ.get("HF_TOKEN")
-        
-        if not api_key:
-            logger.warning("HF_TOKEN is not set. Using dummy-key, calls will likely fail if hitting production OpenAI.")
-            api_key = "dummy-key"
-            
-        self.model_name = model_name
-        
+        self.model_name = MODEL_NAME
         self.client = AsyncOpenAI(
-            base_url=api_base_url,
-            api_key=api_key,
+            base_url=API_BASE_URL,
+            api_key=HF_TOKEN,
         )
 
     async def act(self, observation) -> Action:
-        """Asynchronous logic for baseline reproduction using OpenAI client."""
-        task_id = observation.task_id
-        instruction = observation.instruction
-        context = observation.context
-        
-        prompt = f"You are an expert software engineer resolving real-world tickets.\nTask: {instruction}\n\nStarter Code:\n{context}\n\nPlease provide ONLY the raw python/logic requested as your response. Do not use markdown blocks, just raw code."
-        
+        """Asynchronous logic for baseline reproduction."""
         try:
             response = await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are a helpful coding assistant. Output only the requested code, without formatting or explanation."},
-                    {"role": "user", "content": prompt}
+                    {"role": "system", "content": "Resolve the coding ticket. Output ONLY valid python code."},
+                    {"role": "user", "content": f"Task: {observation.instruction}\nContext: {observation.context}"}
                 ],
                 max_tokens=256,
                 temperature=0.1
             )
-            
-            solution = response.choices[0].message.content.strip()
-            if solution.startswith("```python"):
-                solution = solution[9:]
-            if solution.startswith("```"):
-                solution = solution[3:]
-            if solution.endswith("```"):
-                solution = solution[:-3]
-            solution = solution.strip()
-            
-            return Action(
-                action_type=ActionType.SUBMIT,
-                solution=solution,
-                explanation=f"LLM generated solution using {self.model_name}"
-            )
-        except Exception as e:
-            # Fallback action on error (e.g. invalid API key) to ensure pipeline completion
+            solution = response.choices[0].message.content.strip().replace("```python", "").replace("```", "").strip()
+            return Action(action_type=ActionType.SUBMIT, solution=solution)
+        except Exception:
             return Action(action_type=ActionType.SKIP)
 
-
 async def run_baseline_repro(base_url="ws://localhost:7860/ws"):
-    """Main task loop for scoring."""
-    client = CodingEnvClient(base_url)
+    """Main task loop implementing strict STDOUT formats."""
+    steps_taken = 0
+    rewards: List[float] = []
+    success = False
+    
+    print(f"[START] task={TASK_NAME} env={BENCHMARK} model={MODEL_NAME}", flush=True)
     
     try:
+        client = CodingEnvClient(base_url)
         async with client as env:
             agent = BaselineAgent()
             obs = await env.reset()
-            episode_id = await env.get_state()
-            episode_id = episode_id.episode_id
             
-            # Formatted stdout requirement
-            logger.info(f"[START] Episode {episode_id} initialization sequence begun...")
-            
-            while obs.task_id != "complete":
+            for step in range(1, 11): # Max 10 steps
+                steps_taken = step
                 action = await agent.act(obs)
                 obs, reward, done, info = await env.step(action)
                 
-                # Formatted stdout requirement
-                logger.info(f"[STEP] Task {obs.task_id} Executed | Action: {action.action_type.value} | Reward: {reward.score:.2f} | Completed: {done}")
+                r_val = float(reward.score) if hasattr(reward, 'score') else 0.0
+                rewards.append(r_val)
                 
-                if done and obs.task_id == "complete":
+                # [STEP] step=<n> action=<action_str> reward=<0.00> done=<true|false> error=<msg|null>
+                print(f"[STEP] step={step} action={action.action_type.value} reward={r_val:.2f} done={str(done).lower()} error=null", flush=True)
+                
+                if done:
                     break
-
-            # Final state verification
-            final_state = await env.get_state()
             
-            # Formatted stdout requirement
-            logger.info(f"[END] Episode {final_state.episode_id} Final Cumulative Reward: {final_state.total_reward:.2f}")
+            total_reward = sum(rewards)
+            score = min(max(total_reward, 0.0), 1.0)
+            success = score >= 0.1
             
-    except ConnectionRefusedError:
-        logger.error("Connection failed. Is the OpenEnv server running?")
     except Exception as e:
-        logger.error(f"Execution Error: {str(e)}")
+        logger.error(f"Inference Failure: {str(e)}")
+    finally:
+        # [END] success=<true|false> steps=<n> score=<0.3f> rewards=<r1,r2,...,rn>
+        rew_str = ",".join(f"{r:.2f}" for r in rewards)
+        score_val = sum(rewards) / len(rewards) if rewards else 0.0
+        print(f"[END] success={str(success).lower()} steps={steps_taken} score={score_val:.3f} rewards={rew_str}", flush=True)
 
 def main():
     url = os.getenv("OPENENV_URL", "ws://localhost:7860/ws")

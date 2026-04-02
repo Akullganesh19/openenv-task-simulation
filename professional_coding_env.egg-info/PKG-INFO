@@ -1,3 +1,22 @@
+Metadata-Version: 2.4
+Name: professional-coding-env
+Version: 3.0.0
+Summary: Professional software engineering task simulation with isolated WebSocket sessions
+Author: OpenEnv Submitter
+License: MIT
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Classifier: Framework :: FastAPI
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: pydantic==2.5.0
+Requires-Dist: fastapi>=0.104.1
+Requires-Dist: uvicorn>=0.24.0
+Requires-Dist: websockets
+Requires-Dist: openai>=1.2.3
+Requires-Dist: gradio
+Requires-Dist: openenv>=0.1.0
+
 ---
 title: professional-coding-env
 emoji: 🚀

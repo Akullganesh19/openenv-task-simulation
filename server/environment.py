@@ -81,11 +81,21 @@ class CodingEnvironment:
             score=max(0.0, progress),
             partial_credit=max(0.0, progress),
             final_reward=max(0.0, progress),
-            rationale=f"Automated grader returned score: {progress}"
+            rationale=f"Action {action.action_type.value} processed. Progress: {progress}"
         )
         
-        done = False
-        if progress >= 0.8: # Threshold for completion
+        done_task = False
+        if action.action_type == ActionType.SKIP:
+            self._state.task_history.append(TaskRecord(
+                task_id=current_task_id,
+                difficulty=task["difficulty"],
+                status=TaskStatus.FAILED,
+                final_reward=0.0,
+                attempts_used=0,
+                hints_used=0
+            ))
+            done_task = True
+        elif progress >= 0.8: # Threshold for completion
             self._state.total_reward += progress
             self._state.task_history.append(TaskRecord(
                 task_id=current_task_id,
@@ -95,7 +105,9 @@ class CodingEnvironment:
                 attempts_used=1,
                 hints_used=0
             ))
+            done_task = True
             
+        if done_task:
             # Transition logic
             task_list = self.task_manager.list_tasks()
             try:
@@ -105,13 +117,10 @@ class CodingEnvironment:
                 else:
                     self._state.current_task_id = "complete"
                     self._state.done = True
-                    done = True
             except ValueError:
-                # Task not in manager
                 self._state.done = True
-                done = True
                 
-        return self._get_obs(), reward, done, self._state.model_dump()
+        return self._get_obs(), reward, self._state.done, self._state.model_dump()
 
     @property
     def state(self) -> EnvironmentState:

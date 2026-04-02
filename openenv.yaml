@@ -1,5 +1,6 @@
 name: "professional-coding-env"
 version: "3.0.0"
+modes: ["websocket", "rest"]
 description: "A professional-grade simulation environment for software engineering agents featuring real-world tasks like email triage, data cleansing, and security patching."
 author: "OpenEnv Cyber Analyst"
 repository: "https://huggingface.co/spaces/user/professional-coding-env"
@@ -14,12 +15,15 @@ server:
 tasks:
   - id: "task_1"
     difficulty: "easy"
+    complexity_estimate: 0.2
     description: "Email Triage Task: Automatically filter a stream of helpdesk emails to identify urgent support tickets."
   - id: "task_2"
     difficulty: "medium"
+    complexity_estimate: 0.5
     description: "Data Pipeline Task: Cleanse an incoming customer dataset by removing duplicates and imputing missing means."
   - id: "task_3"
     difficulty: "hard"
+    complexity_estimate: 0.9
     description: "Code Review & Security Patch: Detect and remediate a blind SQL injection vulnerability in a data access layer."
 
 capabilities:

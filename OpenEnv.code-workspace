@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../tasks"
+		},
+		{
+			"path": "../__pycache__"
+		}
+	],
+	"settings": {}
+}

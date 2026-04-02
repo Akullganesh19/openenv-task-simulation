@@ -3,6 +3,8 @@ import re
 from models import TaskDifficulty
 
 def grade_email_triage(solution: str) -> float:
+    if not solution or not isinstance(solution, str):
+        return 0.0
     urgency_keywords = ["urgent", "ASAP", "down", "critical", "refund"]
     score = 0.0
     # Check if the logic loops through emails and checks urgency
@@ -15,6 +17,8 @@ def grade_email_triage(solution: str) -> float:
     return max(0.0, min(1.0, score))
 
 def grade_data_cleaning(solution: str) -> float:
+    if not solution or not isinstance(solution, str):
+        return 0.0
     # A real-world task: dropping duplicates and handling NAs in pandas or vanilla python
     score = 0.0
     if "drop_duplicates" in solution or "set(" in solution:
@@ -26,9 +30,11 @@ def grade_data_cleaning(solution: str) -> float:
     return max(0.0, min(1.0, score))
 
 def grade_code_review(solution: str) -> float:
+    if not solution or not isinstance(solution, str):
+        return 0.0
     # Real-world: Detecting and patching SQL injection via parameterized queries
     score = 0.0
-    if "execute(" in solution and "?" in solution or "%s" in solution:
+    if "execute(" in solution and ("?" in solution or "%s" in solution):
         score += 0.5
     if "f-string" not in solution.lower() and "format(" not in solution:
         score += 0.5
