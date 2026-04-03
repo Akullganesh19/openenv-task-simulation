@@ -10,3 +10,9 @@ prometheus-client
 python-jose[cryptography]
 passlib[bcrypt]
 python-dotenv
+astunparse>=1.6.3
+websockets
+openai>=1.2.3
+gradio
+openenv>=0.1.0
+pydantic-settings>=2.0.0
