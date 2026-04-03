@@ -30,7 +30,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-v1_router = APIRouter(prefix="/api/v1")
+v1_router = APIRouter()
 
 # Thread-safe session management
 sessions: Dict[str, CodingEnvironment] = {}
