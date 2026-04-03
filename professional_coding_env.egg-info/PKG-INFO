@@ -9,13 +9,22 @@ Classifier: Operating System :: OS Independent
 Classifier: Framework :: FastAPI
 Requires-Python: >=3.11
 Description-Content-Type: text/markdown
-Requires-Dist: pydantic==2.5.0
+Requires-Dist: pydantic[email]==2.5.0
+Requires-Dist: pydantic-settings>=2.0.0
 Requires-Dist: fastapi>=0.104.1
 Requires-Dist: uvicorn>=0.24.0
 Requires-Dist: websockets
 Requires-Dist: openai>=1.2.3
 Requires-Dist: gradio
 Requires-Dist: openenv>=0.1.0
+Requires-Dist: sqlalchemy>=2.0.0
+Requires-Dist: passlib[bcrypt]>=1.7.4
+Requires-Dist: python-jose[cryptography]>=3.3.0
+Requires-Dist: prometheus-client>=0.17.1
+Requires-Dist: structlog>=23.2.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: astunparse>=1.6.3
+Requires-Dist: python-multipart
 
 ---
 title: professional-coding-env

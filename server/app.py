@@ -4,15 +4,32 @@ import uuid
 import logging
 from typing import Dict, Any, Optional
 from fastapi import FastAPI, WebSocket, HTTPException, Depends, Body, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
 from server.environment import CodingEnvironment
 from models import Observation, Action, Reward, EnvironmentState
+from server.enhanced_api import router as enhanced_router
+from config import settings
 import uvicorn
 
 # Setup logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=getattr(logging, settings.log_level), format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("openenv-server")
 
-app = FastAPI(title="OpenEnv Server", description="Production-grade RL coding environment with session-isolated access.")
+app = FastAPI(
+    title=f"{settings.app_name} Server", 
+    description="Production-grade RL coding environment with session-isolated access.",
+    version=settings.app_version
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 v1_router = APIRouter(prefix="/api/v1")
 
 # Thread-safe session management
@@ -74,6 +91,7 @@ async def state_endpoint(session_id: str):
     return {"state": env.state.model_dump()}
 
 app.include_router(v1_router)
+app.include_router(enhanced_router)
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

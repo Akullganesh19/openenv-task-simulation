@@ -3,7 +3,7 @@ version: "3.0.0"
 modes: ["websocket", "rest"]
 description: "A professional-grade simulation environment for software engineering agents featuring real-world tasks like email triage, data cleansing, and security patching."
 author: "OpenEnv Cyber Analyst"
-repository: "https://huggingface.co/spaces/user/professional-coding-env"
+repository: "https://huggingface.co/spaces/aurenor/openenv-task-simulation"
 license: "MIT"
 
 server:

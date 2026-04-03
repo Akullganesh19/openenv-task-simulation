@@ -18,10 +18,11 @@ class TaskDifficulty(str, Enum):
 
 
 class TaskStatus(str, Enum):
-    PENDING   = "pending"
-    ACTIVE    = "active"
-    COMPLETED = "completed"
-    FAILED    = "failed"
+    PENDING     = "pending"
+    ACTIVE      = "active"
+    IN_PROGRESS = "in_progress"
+    COMPLETED   = "completed"
+    FAILED      = "failed"
 
 
 class Observation(BaseModel):
@@ -97,6 +98,7 @@ class EnvironmentState(BaseModel):
     current_task_id: str
     step: int = 0
     total_reward: float = 0.0
+    attempts_remaining: int = 3
     task_history: List[TaskRecord] = Field(default_factory=list)
     done: bool = False
     info: Dict[str, Any] = Field(default_factory=dict)

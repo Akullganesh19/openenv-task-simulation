@@ -72,7 +72,7 @@ class CodingEnvironment:
 
         progress = 0.0
         if action.action_type == ActionType.SUBMIT and action.solution:
-            progress = self.task_manager.grade_solution(current_task_id, action.solution)
+            progress = self.task_manager.grade(current_task_id, action.solution)
         elif action.action_type == ActionType.HINT:
             # Logic for hints could be added here
             progress = -0.1 # Placeholder penalty for hints
@@ -107,7 +107,12 @@ class CodingEnvironment:
             ))
             done_task = True
             
+        # Log analytics
+        log_analytics("step_reward", progress, {"task_id": current_task_id, "episode_id": self._state.episode_id})
+        
         if done_task:
+            log_analytics("task_completion", 1.0 if progress >= 0.8 else 0.0, {"task_id": current_task_id})
+            
             # Transition logic
             task_list = self.task_manager.list_tasks()
             try:
@@ -117,6 +122,7 @@ class CodingEnvironment:
                 else:
                     self._state.current_task_id = "complete"
                     self._state.done = True
+                    log_analytics("episode_complete", self._state.total_reward, {"episode_id": self._state.episode_id})
             except ValueError:
                 self._state.done = True
                 
