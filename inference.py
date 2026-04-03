@@ -3,7 +3,7 @@ import logging
 import sys
 import os
 from typing import List
-from openai import AsyncOpenAI
+from openai import OpenAI
 from models import Action, ActionType
 from client import CodingEnvClient
 
@@ -17,27 +17,27 @@ logging.basicConfig(
 logger = logging.getLogger("inference-agent")
 
 # Mandatory environment variables
-API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:11434/v1")
-MODEL_NAME = os.environ.get("MODEL_NAME", "llama3")
-HF_TOKEN = os.environ.get("HF_TOKEN", "ollama")
-LOCAL_IMAGE_NAME = os.environ.get("LOCAL_IMAGE_NAME", "openenv-baseline:latest")
-TASK_NAME = os.environ.get("OPENENV_TASK", "software-engineering-simulation")
-BENCHMARK = os.environ.get("OPENENV_BENCHMARK", "openenv-v1")
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:11434/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "llama3")
+HF_TOKEN = os.getenv("HF_TOKEN")
+LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME")
+TASK_NAME = os.getenv("OPENENV_TASK")
+BENCHMARK = os.getenv("OPENENV_BENCHMARK")
 
 class BaselineAgent:
     """Reference agent for baseline reproduction scoring using OpenAI client."""
     def __init__(self, name="Agent-alpha-01"):
         self.name = name
         self.model_name = MODEL_NAME
-        self.client = AsyncOpenAI(
+        self.client = OpenAI(
             base_url=API_BASE_URL,
             api_key=HF_TOKEN,
         )
 
-    async def act(self, observation) -> Action:
-        """Asynchronous logic for baseline reproduction."""
+    def act(self, observation) -> Action:
+        """Logic for baseline reproduction."""
         try:
-            response = await self.client.chat.completions.create(
+            response = self.client.chat.completions.create(
                 model=self.model_name,
                 messages=[
                     {"role": "system", "content": "Resolve the coding ticket. Output ONLY valid python code."},
@@ -67,7 +67,7 @@ async def run_baseline_repro(base_url="ws://localhost:7860/ws"):
             
             for step in range(1, 11): # Max 10 steps
                 steps_taken = step
-                action = await agent.act(obs)
+                action = agent.act(obs)
                 obs, reward, done, info = await env.step(action)
                 
                 r_val = float(reward.score) if hasattr(reward, 'score') else 0.0
