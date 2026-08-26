@@ -3,6 +3,7 @@ import secrets
 from typing import Dict, Any, Optional, Tuple
 from models import EnvironmentState, TaskRecord, TaskDifficulty, Observation, Action, Reward, TaskStatus, ActionType
 from tasks import TaskManager
+from models.database import log_analytics
 
 class CodingEnvironment:
     """Professional OpenEnv environment for coding tasks. 

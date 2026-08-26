@@ -1,14 +1,14 @@
 import secrets
 import hashlib
 import time
-import logging
+import structlog
 from typing import Dict, Any, Optional, Tuple
 from .models import EnvironmentState, TaskRecord, TaskDifficulty, Observation, Action, Reward, TaskStatus, ActionType
 from .tasks import TaskManager
 from metrics import metrics
 from enhanced_graders import enhanced_grader
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 class OpenEnv:
     def __init__(self):
@@ -35,7 +35,7 @@ class OpenEnv:
         
         # Record metrics
         metrics.record_session_start()
-        logger.info(f"Environment reset. Episode: {self.state.episode_id}")
+        logger.info("environment_reset", episode_id=self.state.episode_id)
         
         return self._get_obs()
 
@@ -86,7 +86,7 @@ class OpenEnv:
                 scores = enhanced_grader.grade_solution(action.solution, current_task_id)
                 feedback = enhanced_grader.get_feedback(scores, current_task_id)
             except Exception as e:
-                logger.warning(f"Enhanced grading failed: {str(e)}")
+                logger.warning("enhanced_grading_failed", error=str(e), task_id=current_task_id)
                 feedback = f"Graded with score {progress}"
 
         reward = Reward(
@@ -123,7 +123,7 @@ class OpenEnv:
             if current_idx + 1 < len(task_list):
                 self.state.current_task_id = task_list[current_idx + 1]
                 self.state.attempts_remaining = 3  # Reset attempts for new task
-                logger.info(f"Moving to next task: {self.state.current_task_id}")
+                logger.info("moving_to_next_task", task_id=self.state.current_task_id)
             else:
                 self.state.current_task_id = "completed"
                 self.state.done = True
@@ -132,7 +132,7 @@ class OpenEnv:
                 # Record session end
                 session_duration = time.time() - self.start_time
                 metrics.record_session_end("all_tasks", "mixed", session_duration)
-                logger.info(f"All tasks completed. Total reward: {self.state.total_reward}")
+                logger.info("all_tasks_completed", total_reward=self.state.total_reward)
         else:
             # Record partial attempt
             self.state.task_history.append(TaskRecord(
