@@ -10,10 +10,21 @@ from models import Observation, Action, Reward, EnvironmentState
 from server.enhanced_api import router as enhanced_router
 from config import settings
 import uvicorn
+import structlog
 
-# Setup logging
-logging.basicConfig(level=getattr(logging, settings.log_level), format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("openenv-server")
+# Setup structlog
+structlog.configure(
+    processors=[
+        structlog.stdlib.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.JSONRenderer()
+    ],
+    wrapper_class=structlog.stdlib.BoundLogger,
+    context_class=dict,
+    logger_factory=structlog.stdlib.LoggerFactory(),
+)
+logging.basicConfig(level=getattr(logging, settings.log_level), format='%(message)s')
+logger = structlog.get_logger("openenv-server")
 
 app = FastAPI(
     title=f"{settings.app_name} Server", 
@@ -48,27 +59,31 @@ async def health_check():
 async def reset_endpoint(episode_id: Optional[str] = Body(None, embed=True)):
     """Reset the environment and return the initial observation and session_id."""
     session_id = str(uuid.uuid4())
+    log = logger.bind(session_id=session_id)
     env = CodingEnvironment()
     obs = env.reset(episode_id=episode_id)
     
     async with sessions_lock:
         sessions[session_id] = env
     
-    logger.info(f"New session established via REST: {session_id}")
+    log.info("session_established", transport="rest")
     return {"session_id": session_id, "observation": obs.model_dump()}
 
 @v1_router.post("/step")
 async def step_endpoint(session_id: str = Body(...), action_data: Dict[str, Any] = Body(...)):
     """Execute a step in a given session."""
+    log = logger.bind(session_id=session_id)
     async with sessions_lock:
         env = sessions.get(session_id)
     
     if not env:
+        log.warning("session_not_found")
         raise HTTPException(status_code=404, detail="Session not found or expired.")
     
     try:
         action = Action(**action_data)
         obs, reward, done, info = env.step(action)
+        log.info("step_executed", done=done)
         return {
             "observation": obs.model_dump(),
             "reward": reward.model_dump(),
@@ -76,7 +91,7 @@ async def step_endpoint(session_id: str = Body(...), action_data: Dict[str, Any]
             "info": info
         }
     except Exception as e:
-        logger.error(f"Error in session {session_id} step: {str(e)}")
+        log.error("step_error", error=str(e))
         raise HTTPException(status_code=400, detail=str(e))
 
 @v1_router.get("/state")
@@ -98,12 +113,13 @@ async def websocket_endpoint(websocket: WebSocket):
     """Persistent session logic over WebSockets."""
     await websocket.accept()
     session_id = str(uuid.uuid4())
+    log = logger.bind(session_id=session_id)
     env = CodingEnvironment()
     
     async with sessions_lock:
         sessions[session_id] = env
     
-    logger.info(f"New session established via WS: {session_id}")
+    log.info("session_established", transport="websocket")
     
     try:
         await websocket.send_json({"type": "session_start", "session_id": session_id})
@@ -114,6 +130,8 @@ async def websocket_endpoint(websocket: WebSocket):
             msg_type = message.get("type")
             payload = message.get("payload", {})
             
+            log.info("ws_message_received", msg_type=msg_type)
+
             if msg_type == "reset":
                 obs = env.reset(episode_id=payload.get("episode_id"))
                 await websocket.send_json({"type": "observation", "observation": obs.model_dump()})
@@ -121,6 +139,7 @@ async def websocket_endpoint(websocket: WebSocket):
             elif msg_type == "step":
                 action = Action(**payload)
                 obs, reward, done, info = env.step(action)
+                log.info("step_executed", done=done)
                 await websocket.send_json({
                     "type": "step_result", 
                     "observation": obs.model_dump(), 
@@ -133,15 +152,16 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.send_json({"type": "state", "state": env.state.model_dump()})
                 
             else:
+                log.warning("unsupported_message_type", msg_type=msg_type)
                 await websocket.send_json({"type": "error", "message": f"Unsupported message type: {msg_type}"})
                 
     except Exception as e:
-        logger.error(f"Error in WS session {session_id}: {str(e)}")
+        log.error("ws_error", error=str(e))
     finally:
         async with sessions_lock:
             if session_id in sessions:
                 del sessions[session_id]
-        logger.info(f"Session terminated: {session_id}")
+        log.info("session_terminated")
 
 def main():
     uvicorn.run(app, host="0.0.0.0", port=7860)
