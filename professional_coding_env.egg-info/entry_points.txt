@@ -1,3 +1,0 @@
-[console_scripts]
-openenv-test = inference:run_baseline_repro
-server = server.app:main

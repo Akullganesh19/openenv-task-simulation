@@ -111,6 +111,8 @@ async def register_user(user_data: UserCreate):
             is_active=user.is_active,
             created_at=user.created_at
         )
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"Registration error: {str(e)}")
@@ -203,6 +205,8 @@ async def submit_solution(
             "feedback": feedback,
             "attempt_id": attempt.id
         }
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"Submission error: {str(e)}")
