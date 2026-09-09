@@ -1,0 +1,68 @@
+openapi: 3.0.3
+info:
+  title: UniGig backend integration boundary
+  version: 1.0.0
+  description: >-
+    Backend-only contract. Kong authenticates and routes requests; the service
+    validates Keycloak claims, resolves OpenBao references, and delegates to
+    adapters. Blnk is authoritative for money-relevant state.
+servers:
+  - url: https://api.example.invalid
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/integrations/{integrationId}/invoke:
+    post:
+      operationId: invokeIntegration
+      x-required-keycloak-claims: [iss, exp, sub, preferred_username, realm_access.roles]
+      parameters:
+        - {name: integrationId, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/IntegrationRequest'}
+      responses:
+        '202': {description: Accepted}
+        '401': {description: Missing/invalid Keycloak token}
+        '403': {description: Required Keycloak claim is absent}
+        '409': {description: Adapter is blocked or unconfigured}
+  /api/v1/ledger/transactions:
+    post:
+      operationId: recordLedgerTransaction
+      description: Only the backend may call Blnk; adapters cannot create balances.
+      x-authoritative-provider: blnk
+      security: [{bearerAuth: []}]
+      responses:
+        '201': {description: Blnk transaction recorded}
+        '409': {description: Idempotency or Blnk rejection}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
+  schemas:
+    IntegrationRequest:
+      type: object
+      required: [operation, idempotencyKey]
+      properties:
+        operation: {type: string}
+        idempotencyKey: {type: string}
+        payload: {type: object, additionalProperties: true}
+        secretRefs:
+          type: array
+          description: Only references under the UniGig OpenBao mount are accepted.
+          items:
+            type: string
+            pattern: '^OPENBAO_REF:secret/data/unigig/[a-z0-9/_-]+$'
+        moneyOperation: {type: boolean, default: false}
+        ledgerProvider:
+          type: string
+          enum: [blnk]
+          description: Required and fixed to Blnk for money operations.
+        ledgerTransactionId: {type: string}
+    LedgerTransaction:
+      type: object
+      required: [ledgerProvider, idempotencyKey, ledgerTransactionId]
+      properties:
+        ledgerProvider: {type: string, enum: [blnk]}
+        idempotencyKey: {type: string, minLength: 8}
+        ledgerTransactionId: {type: string}

@@ -1,0 +1,6 @@
+{
+  "name": "UniGig",
+  "description": "Zero-trust campus freelance platform with double-entry escrow, verified skills, automated code testing, and multi-portal governance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

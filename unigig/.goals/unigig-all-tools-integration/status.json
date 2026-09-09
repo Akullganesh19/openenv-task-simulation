@@ -1,0 +1,43 @@
+{
+  "goal_id": "unigig-all-tools-integration",
+  "status": "failed",
+  "iteration": 4,
+  "builder_model": "Claude:Sonnet-4.6",
+  "inspector_model": "Claude:Haiku-4.5",
+  "initial_sha": "664db3bf675c43567a5603d55a71ed0b7056bc0c",
+  "created_at": "2026-09-09T10:28:30+05:30",
+  "history": [
+    {
+      "iteration": 1,
+      "builder_commit": "44f33e9",
+      "inspector_commit": "5556769",
+      "status": "FAIL",
+      "summary": "Inventory and secret/static checks pass, but backend enforcement, self-hosting coverage, and clone/tag documentation do not satisfy criteria 3, 4, and 6; Gradle quality gates are blocked by missing wrapper/tooling.",
+      "feedback": ".goals/unigig-all-tools-integration/inspector-feedback-1.md"
+    },
+    {
+      "iteration": 2,
+      "builder_commit": "ae8204cceb24ade03b31c35350adcf4ba495dc5d",
+      "status": "FAIL",
+      "summary": "Inventory, adapter surfaces, static policy markers, restored Gradle wrapper, and secret checks pass, but runtime policy enforcement, self-hosting manifests, exact stable refs, and removal of the Android backend URL fallback remain incomplete; Android and Docker gates are blocked by missing SDK/Docker.",
+      "feedback": ".goals/unigig-all-tools-integration/inspector-feedback-2.md",
+      "inspector_commit": "recorded-by-this-commit"
+    },
+    {
+      "iteration": 3,
+      "builder_commit": "688e910c00228fd89546ebe2ac23bfe3f2191065",
+      "status": "FAIL",
+      "summary": "Inventory, adapter surfaces, runtime middleware, explicit Android configuration, self-hosting records, Python, secret, and wrapper checks pass; stable-reference quality remains insufficient because all 100 entries are unknown/unverified with a generic ID-substituted rationale. Android SDK, Docker, and OPA gates are unavailable.",
+      "feedback": ".goals/unigig-all-tools-integration/inspector-feedback-3.md",
+      "inspector_commit": "recorded-by-this-commit"
+    },
+    {
+      "iteration": 4,
+      "builder_commit": "99a67e40bc2a5fc026a160d40decdf3d8b87aed7",
+      "status": "FAIL",
+      "summary": "Inventory, adapter surfaces, runtime policy, Python, secret, diff, and wrapper checks pass; 41 of 42 reviewed SHAs are live but grafana is stale, and all 58 unresolved-reference rationales collapse to one generic template. Android SDK, Docker, and OPA gates are unavailable.",
+      "feedback": ".goals/unigig-all-tools-integration/inspector-feedback-4.md",
+      "inspector_commit": "recorded-by-this-commit"
+    }
+  ]
+}

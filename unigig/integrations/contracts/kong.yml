@@ -1,0 +1,19 @@
+_format_version: '3.0'
+_transform: true
+services:
+  - name: unigig-backend
+    url: ${BACKEND_INTERNAL_URL}
+    routes:
+      - name: backend-api
+        paths: [/api]
+        protocols: [https]
+    plugins:
+      - name: jwt
+        config:
+          claims_to_verify: [exp]
+          key_claim_name: iss
+          run_on_preflight: false
+          maximum_expiration: 900
+      - name: cors
+      - name: request-size-limiting
+        config: {allowed_payload_size: 1024}

@@ -1,0 +1,49 @@
+name: unigig-integrations
+services:
+  postgres:
+    image: postgres:16-alpine
+    profiles: [core]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-unigig}
+      POSTGRES_USER: ${POSTGRES_USER:-unigig}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set via local .env/OpenBao}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    profiles: [core]
+    command: start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:?set locally}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set locally}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-unigig}
+      KC_DB_USERNAME: ${POSTGRES_USER:-unigig}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:?set via local .env/OpenBao}
+    depends_on: [postgres]
+  openbao:
+    image: openbao/openbao:latest
+    profiles: [core]
+    command: server -dev -dev-root-token-id=${OPENBAO_DEV_TOKEN:?local-only token}
+    cap_add: [IPC_LOCK]
+  kong:
+    image: kong:3.8
+    profiles: [core]
+    environment:
+      KONG_DATABASE: 'off'
+      KONG_DECLARATIVE_CONFIG: /kong/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    volumes: [../contracts/kong.yml:/kong/kong.yml:ro]
+    ports: ['8000:8000']
+  blnk:
+    image: ghcr.io/blnkfinance/blnk:latest
+    profiles: [ledger]
+    environment:
+      BLNK_DATABASE_URL: ${BLNK_DATABASE_URL:?configure a local Blnk database}
+      BLNK_API_KEY: ${BLNK_API_KEY:?configure a local Blnk key}
+    depends_on: [postgres]
+volumes:
+  postgres-data:
