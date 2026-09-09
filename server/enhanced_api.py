@@ -13,7 +13,7 @@ from models.database import get_database_session, User, Session, TaskAttempt, An
 logger = structlog.get_logger()
 
 # Security
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["argon2", "bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 router = APIRouter(prefix="/api/v1/enhanced")
