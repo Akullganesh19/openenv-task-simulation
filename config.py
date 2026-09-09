@@ -42,6 +42,15 @@ class Settings(BaseSettings):
     metrics_enabled: bool = os.getenv("METRICS_ENABLED", "true").lower() == "true"
     metrics_port: int = int(os.getenv("METRICS_PORT", "9090"))
     
+    # Business and legal settings
+    business_name: str = os.getenv("BUSINESS_NAME", "OpenEnv")
+    business_address: str = os.getenv("BUSINESS_ADDRESS", "")
+    legal_contact_email: str = os.getenv("LEGAL_CONTACT_EMAIL", "legal@example.com")
+    terms_version: str = os.getenv("TERMS_VERSION", "2026-01")
+    privacy_policy_version: str = os.getenv("PRIVACY_POLICY_VERSION", "2026-01")
+    cookie_policy_version: str = os.getenv("COOKIE_POLICY_VERSION", "2026-01")
+    refund_policy_version: str = os.getenv("REFUND_POLICY_VERSION", "2026-01")
+
     # CORS settings
     allowed_origins: list = os.getenv("ALLOWED_ORIGINS", "*").split(",")
     

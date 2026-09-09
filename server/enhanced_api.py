@@ -4,7 +4,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import structlog
 
 from config import settings
@@ -22,6 +22,8 @@ class UserCreate(BaseModel):
     username: str
     email: str
     password: str
+    terms_accepted: bool = Field(..., description="Explicit acceptance of the current terms")
+    privacy_accepted: bool = Field(..., description="Explicit acceptance of the current privacy policy")
 
 class UserResponse(BaseModel):
     id: int
@@ -94,10 +96,18 @@ async def register_user(user_data: UserCreate):
         
         # Create user
         hashed_password = get_password_hash(user_data.password)
+        if not user_data.terms_accepted or not user_data.privacy_accepted:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Explicit acceptance of the terms and privacy policy is required")
+
+        consented_at = datetime.utcnow()
         user = User(
             username=user_data.username,
             email=user_data.email,
-            hashed_password=hashed_password
+            hashed_password=hashed_password,
+            terms_accepted_at=consented_at,
+            privacy_accepted_at=consented_at,
+            terms_version=settings.terms_version,
+            privacy_version=settings.privacy_policy_version,
         )
         db.add(user)
         db.commit()
@@ -111,6 +121,9 @@ async def register_user(user_data: UserCreate):
             is_active=user.is_active,
             created_at=user.created_at
         )
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"Registration error: {str(e)}")
@@ -190,7 +203,7 @@ async def submit_solution(
         analytics = Analytics(
             metric_name="task_submission",
             metric_value=scores['total'],
-            tags=f'{{"task_type": "{submission.task_type}", "user": "{current_user.username}"}}'
+            tags=f'{{"task_type": "{submission.task_type}"}}'
         )
         db.add(analytics)
         

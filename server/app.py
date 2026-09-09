@@ -4,6 +4,8 @@ import uuid
 import logging
 from typing import Dict, Any, Optional
 from fastapi import FastAPI, WebSocket, HTTPException, Depends, Body, APIRouter
+from fastapi.responses import HTMLResponse
+from html import escape
 from fastapi.middleware.cors import CORSMiddleware
 from server.environment import CodingEnvironment
 from models import Observation, Action, Reward, EnvironmentState
@@ -43,6 +45,37 @@ async def read_root():
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "active_sessions": len(sessions)}
+
+def _policy_page(title: str, version: str, summary: str, sections: list[tuple[str, str]]) -> HTMLResponse:
+    """Render a small, accessible policy document without accepting user HTML."""
+    content = "".join(
+        f"<section><h2>{escape(heading)}</h2><p>{escape(body)}</p></section>"
+        for heading, body in sections
+    )
+    address = escape(settings.business_address) if settings.business_address else ""
+    return HTMLResponse(f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{escape(title)} | {escape(settings.business_name)}</title></head>
+<body><header><p><a href="/">{escape(settings.business_name)}</a></p><h1>{escape(title)}</h1></header>
+<main><p>{escape(summary)}</p><p><small>Version {escape(version)}</small></p>{content}</main>
+<footer><address>Questions? <a href="mailto:{escape(settings.legal_contact_email)}">{escape(settings.legal_contact_email)}</a>{('<br>' + address) if address else ''}</address></footer>
+</body></html>""")
+
+@app.get("/privacy", response_class=HTMLResponse, include_in_schema=True)
+async def privacy_policy():
+    return _policy_page("Privacy Policy", settings.privacy_policy_version, "How we collect, use, and protect personal information.", [("Information we collect", "We collect account details and service activity needed to provide OpenEnv."), ("Your choices", "You may contact us to ask about access, correction, or deletion of your personal information.")])
+
+@app.get("/terms", response_class=HTMLResponse, include_in_schema=True)
+async def terms_of_service():
+    return _policy_page("Terms of Service", settings.terms_version, "The rules for using OpenEnv.", [("Acceptable use", "Use the service lawfully and do not interfere with other users or the service."), ("Changes", "We may update these terms and will publish the current version here.")])
+
+@app.get("/cookie", response_class=HTMLResponse, include_in_schema=True)
+async def cookie_policy():
+    return _policy_page("Cookie Policy", settings.cookie_policy_version, "How OpenEnv uses cookies and similar technologies.", [("Current use", "The OpenEnv API currently does not set cookies. If this changes, this policy will be updated before cookies are introduced."), ("Managing cookies", "You can manage cookies through your browser settings.")])
+
+@app.get("/refund", response_class=HTMLResponse, include_in_schema=True)
+async def refund_policy():
+    return _policy_page("Refund Policy", settings.refund_policy_version, "Our approach to refunds for paid services.", [("Requesting a refund", f"Contact {settings.legal_contact_email} with your order details and reason for the request."), ("Review", "Refund requests are reviewed under the applicable order terms and law.")])
 
 @v1_router.post("/reset")
 async def reset_endpoint(episode_id: Optional[str] = Body(None, embed=True)):

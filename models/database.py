@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, Text, DateTime, Boolean, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Float, Text, DateTime, Boolean, ForeignKey, inspect, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -17,6 +17,10 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime)
+    terms_accepted_at = Column(DateTime, nullable=False)
+    privacy_accepted_at = Column(DateTime, nullable=False)
+    terms_version = Column(String, nullable=False)
+    privacy_version = Column(String, nullable=False)
     sessions = relationship('Session', back_populates='user')
 
 class Session(Base):
@@ -56,8 +60,34 @@ def get_database_session():
     from config import settings
     engine = create_engine(settings.database_url)
     Base.metadata.create_all(bind=engine)
+    _migrate_sqlite_user_consent_columns(engine)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     return SessionLocal()
+
+
+def _migrate_sqlite_user_consent_columns(engine):
+    """Add consent fields to pre-existing SQLite databases without rewriting users."""
+    if engine.dialect.name != "sqlite":
+        return
+
+    inspector = inspect(engine)
+    if "users" not in inspector.get_table_names():
+        return
+
+    existing = {column["name"] for column in inspector.get_columns("users")}
+    columns = {
+        "terms_accepted_at": "DATETIME",
+        "privacy_accepted_at": "DATETIME",
+        "terms_version": "VARCHAR",
+        "privacy_version": "VARCHAR",
+    }
+    missing = [(name, definition) for name, definition in columns.items() if name not in existing]
+    if not missing:
+        return
+
+    with engine.begin() as connection:
+        for name, definition in missing:
+            connection.execute(text(f"ALTER TABLE users ADD COLUMN {name} {definition}"))
 
 def log_analytics(metric_name: str, metric_value: float, tags: dict = None):
     session = get_database_session()

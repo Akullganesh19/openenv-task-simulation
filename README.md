@@ -40,6 +40,8 @@ The OpenEnv server exposes both REST and WebSocket interfaces for flexible integ
 
 ### REST Endpoints
 - `GET /health`: Health check and system metrics.
+- `GET /privacy`, `/terms`, `/cookie`, `/refund`: Accessible semantic HTML legal policies. The API currently sets no cookies. Configure business identity, legal contact, and policy versions with `BUSINESS_NAME`, `BUSINESS_ADDRESS`, `LEGAL_CONTACT_EMAIL`, `TERMS_VERSION`, `PRIVACY_POLICY_VERSION`, `COOKIE_POLICY_VERSION`, and `REFUND_POLICY_VERSION`.
+- `POST /api/v1/enhanced/register`: Registration requires `terms_accepted: true` and `privacy_accepted: true`; consent timestamps and policy versions are stored with the user.
 - `POST /reset`: Initialize a new session. Returns `session_id` and the initial `observation`.
 - `POST /step`: Execute an action in an active session. Requires `session_id` and `action_data`.
 - `GET /state?session_id=<id>`: Retrieve full internal state for auditing/debugging.
