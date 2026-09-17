@@ -110,30 +110,37 @@ async def websocket_endpoint(websocket: WebSocket):
         
         while True:
             data = await websocket.receive_text()
-            message = json.loads(data)
-            msg_type = message.get("type")
-            payload = message.get("payload", {})
-            
-            if msg_type == "reset":
-                obs = env.reset(episode_id=payload.get("episode_id"))
-                await websocket.send_json({"type": "observation", "observation": obs.model_dump()})
+            try:
+                message = json.loads(data)
+                msg_type = message.get("type")
+                payload = message.get("payload", {})
                 
-            elif msg_type == "step":
-                action = Action(**payload)
-                obs, reward, done, info = env.step(action)
-                await websocket.send_json({
-                    "type": "step_result", 
-                    "observation": obs.model_dump(), 
-                    "reward": reward.model_dump(), 
-                    "done": done, 
-                    "info": info
-                })
-                
-            elif msg_type == "state":
-                await websocket.send_json({"type": "state", "state": env.state.model_dump()})
-                
-            else:
-                await websocket.send_json({"type": "error", "message": f"Unsupported message type: {msg_type}"})
+                if msg_type == "reset":
+                    obs = env.reset(episode_id=payload.get("episode_id"))
+                    await websocket.send_json({"type": "observation", "observation": obs.model_dump()})
+
+                elif msg_type == "step":
+                    action = Action(**payload)
+                    obs, reward, done, info = env.step(action)
+                    await websocket.send_json({
+                        "type": "step_result",
+                        "observation": obs.model_dump(),
+                        "reward": reward.model_dump(),
+                        "done": done,
+                        "info": info
+                    })
+
+                elif msg_type == "state":
+                    state_data = env.state.model_dump() if hasattr(env, 'state') and env.state is not None else {}
+                    await websocket.send_json({"type": "state", "state": state_data})
+
+                else:
+                    await websocket.send_json({"type": "error", "message": f"Unsupported message type: {msg_type}"})
+            except json.JSONDecodeError:
+                await websocket.send_json({"type": "error", "message": "Invalid JSON format"})
+            except Exception as e:
+                logger.error(f"Error processing WS message in session {session_id}: {str(e)}")
+                await websocket.send_json({"type": "error", "message": "Internal server error processing message"})
                 
     except Exception as e:
         logger.error(f"Error in WS session {session_id}: {str(e)}")

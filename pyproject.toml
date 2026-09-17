@@ -33,7 +33,9 @@ dependencies = [
     "structlog>=23.2.0",
     "python-dotenv>=1.0.0",
     "astunparse>=1.6.3",
-    "python-multipart"
+    "python-multipart",
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
 ]
 
 [project.scripts]
