@@ -25,6 +25,8 @@ Requires-Dist: structlog>=23.2.0
 Requires-Dist: python-dotenv>=1.0.0
 Requires-Dist: astunparse>=1.6.3
 Requires-Dist: python-multipart
+Requires-Dist: httpx>=0.28.1
+Requires-Dist: pytest>=9.1.1
 
 ---
 title: professional-coding-env
