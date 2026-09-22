@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -241,7 +241,7 @@ async def get_analytics(current_user: User = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail="Failed to get analytics")
 
 @router.get("/leaderboard")
-async def get_leaderboard():
+async def get_leaderboard(limit: int = Query(10, ge=1, le=100)):
     """Get top performers"""
     db = get_database_session()
     try:
@@ -255,7 +255,7 @@ async def get_leaderboard():
         ).join(TaskAttempt, TaskAttempt.session_id == Session.id
         ).group_by(User.id
         ).order_by(func.avg(TaskAttempt.score).desc()
-        ).limit(10).all()
+        ).limit(limit).all()
         
         leaderboard = [
             {
