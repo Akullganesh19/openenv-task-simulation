@@ -33,7 +33,7 @@ dependencies = [
     "structlog>=23.2.0",
     "python-dotenv>=1.0.0",
     "astunparse>=1.6.3",
-    "python-multipart"
+    "python-multipart",
 ]
 
 [project.scripts]
@@ -43,3 +43,9 @@ openenv-test = "inference:run_baseline_repro"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["models*", "tasks*", "core*", "server*", "client*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+]
