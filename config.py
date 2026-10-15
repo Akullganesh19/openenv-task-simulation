@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379")
     
     # Security settings
-    secret_key: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+    secret_key: str
     algorithm: str = os.getenv("ALGORITHM", "HS256")
     access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
     
